@@ -1,1 +1,5 @@
 .git*
+
+*.egg-info
+build
+dist
