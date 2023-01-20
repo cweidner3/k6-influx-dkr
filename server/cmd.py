@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import threading
-from typing import Optional
+from typing import Optional, Tuple
 
 MUX = threading.Semaphore()
 
@@ -178,3 +178,17 @@ def run_k6(script: bytes):
     )
     thr.start()
     return ReturnStatus.STARTED
+
+
+def get_status() -> Tuple[str, int]:
+    '''
+    :returns:   Tuple of (message, status code).
+    '''
+    def _get_msg(val: Optional[str]) -> str:
+        return val if val is not None else ''
+    code = _STAT.status_code
+    if code is None:
+        return 'In progress', 202
+    if code == 0:
+        return _get_msg(_STAT.msg), 200
+    return _get_msg(_STAT.error_msg), 500

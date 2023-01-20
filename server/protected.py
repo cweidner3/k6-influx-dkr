@@ -38,11 +38,4 @@ def run_load_tests():
 
 @bp_restrict.route('/status', methods=['GET'])
 def load_test_status():
-    def _get_msg(val: Optional[str]) -> str:
-        return val if val is not None else ''
-    code = cmd._STAT.status_code
-    if code is None:
-        return 'In progress', 202
-    if code == 0:
-        return _get_msg(cmd._STAT.msg), 200
-    return _get_msg(cmd._STAT.error_msg), 500
+    return cmd.get_status()
