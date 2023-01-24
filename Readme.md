@@ -1,7 +1,9 @@
 # XK6 Built K6 With InfluxDB v2 Support
 
 [![Version](https://img.shields.io/github/v/release/cweidner3/k6-influx-dkr?label="GitHub Release")](https://github.com/cweidner3/k6-influx-dkr)
+
 [![Docker](https://img.shields.io/docker/v/cweidner3/k6-influx-dkr?label="Latest Docker")](https://github.com/cweidner3/k6-influx-dkr)
+
 [![Build Release Docker Images in CI](https://github.com/cweidner3/k6-influx-dkr/actions/workflows/push-rel-images.yml/badge.svg)](https://github.com/cweidner3/k6-influx-dkr/actions/workflows/push-rel-images.yml)
 
 ## Links
