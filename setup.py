@@ -8,5 +8,8 @@ setuptools.setup(
     description='',
     long_description='',
     packages=['server'],
-    install_requires=['flask'],
+    install_requires=[
+        'flask',
+        'pytz',
+    ],
 )
