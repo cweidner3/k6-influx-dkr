@@ -38,4 +38,12 @@ def run_load_tests():
 
 @bp_restrict.route('/status', methods=['GET'])
 def load_test_status():
-    return cmd.get_status()
+    stat, code, last_run = cmd.get_status()
+    if flask.request.accept_mimetypes.accept_json:
+        jstat = {
+            'lastRun': last_run,
+            'code': code,
+            'message': stat,
+        }
+        return jstat, code
+    return stat, code

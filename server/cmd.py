@@ -5,6 +5,9 @@ import shutil
 import subprocess
 import threading
 from typing import Optional, Tuple
+from datetime import datetime
+
+import pytz
 
 MUX = threading.Semaphore()
 
@@ -35,6 +38,7 @@ class _StatusMuxer:
     def __init__(self):
         self._mux = threading.Semaphore()
         self._running: bool = False
+        self._last_timestamp: Optional[datetime] = None
         self._last_status: Optional[int] = None
         self._last_error_msg: Optional[str] = None
         self._last_success_msg: Optional[str] = None
@@ -61,6 +65,12 @@ class _StatusMuxer:
         return value
 
     @property
+    def last_run(self) -> Optional[datetime]:
+        if self._last_timestamp is None:
+            return None
+        return self._last_timestamp
+
+    @property
     def error_msg(self) -> Optional[str]:
         ''' Error message if return was not successful. '''
         with self._mux:
@@ -72,6 +82,7 @@ class _StatusMuxer:
         with self._mux:
             if self._running:
                 return False
+            self._last_timestamp = datetime.utcnow().astimezone(pytz.utc)
             self._running = True
             self._last_status = None
             self._last_error_msg = None
@@ -180,17 +191,19 @@ def run_k6(script: bytes):
     return ReturnStatus.STARTED
 
 
-def get_status() -> Tuple[str, int]:
+def get_status() -> Tuple[str, int, str]:
     '''
     :returns:   Tuple of (message, status code).
     '''
     def _get_msg(val: Optional[str]) -> str:
         return val if val is not None else ''
+    last_run = _STAT.last_run
+    last_run = '' if last_run is None else last_run.isoformat()
     code = _STAT.status_code
     if code is None and _STAT.running is False:
-        return 'Not Started', 200
+        return 'Not Started', 200, last_run
     if code is None:
-        return 'In progress', 202
+        return 'In progress', 202, last_run
     if code == 0:
-        return _get_msg(_STAT.msg), 200
-    return _get_msg(_STAT.error_msg), 500
+        return _get_msg(_STAT.msg), 200, last_run
+    return _get_msg(_STAT.error_msg), 500, last_run
