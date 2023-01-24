@@ -187,6 +187,8 @@ def get_status() -> Tuple[str, int]:
     def _get_msg(val: Optional[str]) -> str:
         return val if val is not None else ''
     code = _STAT.status_code
+    if code is None and _STAT.running is False:
+        return 'Not Started', 200
     if code is None:
         return 'In progress', 202
     if code == 0:
