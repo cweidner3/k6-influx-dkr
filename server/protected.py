@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Any, Dict, Iterable, Optional
 
 import flask
 import flask.logging
@@ -16,15 +16,20 @@ def _handle_ingest():
         return 'Unauthorized', 401
 
 
+def _get_other_args(exclude: Optional[Iterable[str]] = None) -> Dict[str, Any]:
+    exclude = ['secret', *(exclude if exclude else [])]
+    it_ = flask.request.args.items()
+    it_ = filter(lambda x: x[0] not in exclude, it_)
+    return dict(it_)
+
+
 bp_restrict.before_request(_handle_ingest)
 
 
 @bp_restrict.route('/run', methods=['POST'])
 def run_load_tests():
     log = flask.logging.create_logger(flask.current_app)
-    kwargs = {
-        'name': flask.request.args.get('name')
-    }
+    kwargs = _get_other_args()
     if flask.request.files:
         files = flask.request.files
         log.info('Found files in request: %s', files.keys())
