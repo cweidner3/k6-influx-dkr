@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import threading
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 from datetime import datetime
 
 import pytz
@@ -42,6 +42,7 @@ class _StatusMuxer:
         self._last_status: Optional[int] = None
         self._last_error_msg: Optional[str] = None
         self._last_success_msg: Optional[str] = None
+        self._metadata: Dict[str, Any] = {}
 
     @property
     def running(self) -> bool:
@@ -77,7 +78,12 @@ class _StatusMuxer:
             value = self._last_error_msg
         return value
 
-    def start(self):
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        ''' Returns metadata object. '''
+        return self._metadata.copy()
+
+    def start(self, **metadata):
         ''' Set everything to indicate the process as started. '''
         with self._mux:
             if self._running:
@@ -87,6 +93,7 @@ class _StatusMuxer:
             self._last_status = None
             self._last_error_msg = None
             self._last_success_msg = None
+            self._metadata = metadata
             return True
 
     def error(self, code: int, msg: bytes) -> bool:
@@ -119,8 +126,8 @@ class _StatusMuxer:
 _STAT = _StatusMuxer()
 
 
-def _run_tests_thr(script: bytes):
-    _STAT.start()
+def _run_tests_thr(script: bytes, **kwargs):
+    _STAT.start(**kwargs)
 
     try:
         build_path = Path('build')
@@ -179,19 +186,20 @@ def _run_tests_thr(script: bytes):
         _STAT.error(1, f'{_e}'.encode())
 
 
-def run_k6(script: bytes):
+def run_k6(script: bytes, **kwargs):
     if _STAT.running:
         return ReturnStatus.NO_ACTION
     thr = threading.Thread(
         target=_run_tests_thr,
         name='load_tester_thr',
         args=(script,),
+        kwargs=kwargs,
     )
     thr.start()
     return ReturnStatus.STARTED
 
 
-def get_status() -> Tuple[str, int, str]:
+def get_status() -> Tuple[str, int, str, Dict[str, Any]]:
     '''
     :returns:   Tuple of (message, status code).
     '''
@@ -200,10 +208,11 @@ def get_status() -> Tuple[str, int, str]:
     last_run = _STAT.last_run
     last_run = '' if last_run is None else last_run.isoformat()
     code = _STAT.status_code
+    metadata = _STAT.metadata
     if code is None and _STAT.running is False:
-        return 'Not Started', 200, last_run
+        return 'Not Started', 200, last_run, metadata
     if code is None:
-        return 'In progress', 202, last_run
+        return 'In progress', 202, last_run, metadata
     if code == 0:
-        return _get_msg(_STAT.msg), 200, last_run
-    return _get_msg(_STAT.error_msg), 500, last_run
+        return _get_msg(_STAT.msg), 200, last_run, metadata
+    return _get_msg(_STAT.error_msg), 500, last_run, metadata

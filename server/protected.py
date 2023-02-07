@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Any, Dict, Iterable, Optional
 
 import flask
 import flask.logging
@@ -16,12 +16,20 @@ def _handle_ingest():
         return 'Unauthorized', 401
 
 
+def _get_other_args(exclude: Optional[Iterable[str]] = None) -> Dict[str, Any]:
+    exclude = ['secret', *(exclude if exclude else [])]
+    it_ = flask.request.args.items()
+    it_ = filter(lambda x: x[0] not in exclude, it_)
+    return dict(it_)
+
+
 bp_restrict.before_request(_handle_ingest)
 
 
 @bp_restrict.route('/run', methods=['POST'])
 def run_load_tests():
     log = flask.logging.create_logger(flask.current_app)
+    kwargs = _get_other_args()
     if flask.request.files:
         files = flask.request.files
         log.info('Found files in request: %s', files.keys())
@@ -32,17 +40,18 @@ def run_load_tests():
     else:
         return 'Must provide script in the body of the request', 400
     # log.info('Using script for tests: %s', script)
-    status = cmd.run_k6(script)
+    status = cmd.run_k6(script, **kwargs)
     return 'OK', 202 if status is cmd.ReturnStatus.NO_ACTION else 201
 
 
 @bp_restrict.route('/status', methods=['GET'])
 def load_test_status():
-    stat, code, last_run = cmd.get_status()
+    stat, code, last_run, metadata = cmd.get_status()
     if flask.request.accept_mimetypes.accept_json:
         jstat = {
             'lastRun': last_run,
             'code': code,
+            'metadata': metadata,
             'message': stat,
         }
         return jstat, code
